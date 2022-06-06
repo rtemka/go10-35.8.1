@@ -1,5 +1,11 @@
 package server
 
+import (
+	"math/rand"
+	"net"
+	"time"
+)
+
 var proverbs = []string{
 	"Don't communicate by sharing memory, share memory by communicating.",
 	"Concurrency is not parallelism.",
@@ -20,4 +26,39 @@ var proverbs = []string{
 	"Design the architecture, name the components, document the details.",
 	"Documentation is for users.",
 	"Don't panic.",
+}
+
+const serverSleepDuration = time.Second * 3
+
+func Listen(proto, socket string) error {
+	listener, err := net.Listen(proto, socket)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = listener.Close() }()
+
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			return err
+		}
+
+		go func(c net.Conn) {
+			defer c.Close()
+
+			for {
+				rand.Seed(time.Now().UnixNano())
+
+				p := proverbs[rand.Intn(len(proverbs))]
+
+				_, err := c.Write([]byte(p))
+				if err != nil {
+					return
+				}
+
+				time.Sleep(serverSleepDuration)
+			}
+
+		}(conn)
+	}
 }
