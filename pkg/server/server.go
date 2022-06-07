@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"math/rand"
 	"net"
 	"time"
@@ -28,9 +29,10 @@ var proverbs = []string{
 	"Don't panic.",
 }
 
-const serverSleepDuration = time.Second * 3
+const serverWisdomPause = time.Second * 3
 
-func Listen(proto, socket string) error {
+func Listen(ctx context.Context, proto, socket string) error {
+
 	listener, err := net.Listen(proto, socket)
 	if err != nil {
 		return err
@@ -43,22 +45,32 @@ func Listen(proto, socket string) error {
 			return err
 		}
 
-		go func(c net.Conn) {
-			defer c.Close()
+		go handleProverb(ctx, conn)
+	}
 
-			for {
-				rand.Seed(time.Now().UnixNano())
+}
 
-				p := proverbs[rand.Intn(len(proverbs))]
+func handleProverb(ctx context.Context, c net.Conn) {
+	defer func() { _ = c.Close() }()
 
-				_, err := c.Write([]byte(p))
-				if err != nil {
-					return
-				}
+	for {
 
-				time.Sleep(serverSleepDuration)
+		select {
+
+		case <-ctx.Done():
+			return
+
+		case <-time.After(serverWisdomPause):
+
+			rand.Seed(time.Now().UnixNano())
+
+			p := proverbs[rand.Intn(len(proverbs))] + "\n"
+
+			_, err := c.Write([]byte(p))
+			if err != nil {
+				return
 			}
 
-		}(conn)
+		}
 	}
 }
