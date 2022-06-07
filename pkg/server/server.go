@@ -53,6 +53,8 @@ func Listen(ctx context.Context, proto, socket string) error {
 func handleProverb(ctx context.Context, c net.Conn) {
 	defer func() { _ = c.Close() }()
 
+	rand.Seed(time.Now().UnixNano())
+
 	for {
 
 		select {
@@ -61,8 +63,6 @@ func handleProverb(ctx context.Context, c net.Conn) {
 			return
 
 		case <-time.After(serverWisdomPause):
-
-			rand.Seed(time.Now().UnixNano())
 
 			p := proverbs[rand.Intn(len(proverbs))] + "\n"
 
